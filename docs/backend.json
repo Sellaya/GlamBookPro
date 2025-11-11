@@ -1,0 +1,53 @@
+{
+  "collections": {
+    "userProfile": {
+      "schema": "UserProfile"
+    },
+    "booking": {
+      "schema": "Booking"
+    }
+  },
+  "schemas": {
+    "UserProfile": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"]
+        }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "Booking": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "string",
+          "description": "User ID"
+        },
+        "service": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["confirmed", "cancelled", "completed"]
+        },
+        "price": {
+          "type": "number"
+        }
+      },
+      "required": ["user", "service", "date", "status", "price"]
+    }
+  }
+}
