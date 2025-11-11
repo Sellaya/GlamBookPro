@@ -1,27 +1,33 @@
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
+'use client';
+import {useUser} from '@/firebase';
+import {useRouter} from 'next/navigation';
+import {useEffect} from 'react';
+import {Loader} from 'lucide-react';
+import {isUserAdmin} from '@/lib/firebase-admin';
 
 export default function Home() {
+  const {user, isUserLoading} = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading) {
+      if (user) {
+        isUserAdmin(user.uid).then((isAdmin) => {
+          if (isAdmin) {
+            router.push('/admin/payments');
+          } else {
+            router.push(`/users/${user.uid}/bookings`);
+          }
+        });
+      } else {
+        router.push('/login');
+      }
+    }
+  }, [user, isUserLoading, router]);
+
   return (
-    <>
-      <Sidebar>
-        <SidebarHeader>
-          <SidebarTrigger />
-        </SidebarHeader>
-        <SidebarContent>
-          {/* Sidebar content goes here */}
-        </SidebarContent>
-      </Sidebar>
-      <SidebarInset>
-        <main className="flex min-h-screen flex-col items-center justify-center p-24">
-          <h1 className="text-4xl font-bold">Welcome to GlamBookPro</h1>
-        </main>
-      </SidebarInset>
-    </>
+    <div className="flex h-screen items-center justify-center">
+      <Loader className="animate-spin" />
+    </div>
   );
 }

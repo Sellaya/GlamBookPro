@@ -1,155 +1,39 @@
-/**
- * @fileoverview Firestore Security Rules for GlamBook Pro.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for client data (quotes, bookings, bookingServices)
- * and provides public read access to service information.
- *
- * Data Structure:
- * - /clients/{clientId}: Stores client profiles.
- * - /clients/{clientId}/quotes/{quoteId}: Stores quotes belonging to a client.
- * - /clients/{clientId}/bookings/{bookingId}: Stores bookings belonging to a client.
- * - /clients/{clientId}/bookings/{bookingId}/bookingServices/{bookingServiceId}: Stores booking services for a specific booking.
- * - /services/{serviceId}: Stores publicly available service information.
- *
- * Key Security Decisions:
- * - Clients have full control over their own profiles, quotes, bookings, and bookingServices.
- * - Listing of clients is disallowed.
- * - Service information is publicly readable.
- *
- * Denormalization for Authorization:
- * - Client IDs are duplicated in subcollections (quotes, bookings, bookingServices) to avoid costly `get()` calls and enforce ownership efficiently.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Secures client profiles. Only the client can read/write their own profile.
-     * @path /clients/{clientId}
-     * @allow (create) User with UID 'user_abc' can create a client document if request.auth.uid == 'user_abc' and request.resource.data.id == 'user_abc'.
-     * @allow (get, update, delete) User with UID 'user_abc' can read, update, or delete their client document at /clients/user_abc.
-     * @deny (create) User with UID 'user_xyz' cannot create a client document at /clients/user_abc.
-     * @deny (update, delete) User with UID 'user_xyz' cannot update or delete the client document at /clients/user_abc.
-     * @principle Enforces document ownership for reads and writes.
-     */
-    match /clients/{clientId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(clientId);
-      allow list: if false;
-      allow create: if isOwner(clientId) && request.resource.data.id == clientId;
-      allow update: if isExistingOwner(clientId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(clientId);
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    /**
-     * @description Secures quotes associated with a specific client. Only the client can read/write their own quotes.
-     * @path /clients/{clientId}/quotes/{quoteId}
-     * @allow (create) User 'user_abc' can create a quote under /clients/user_abc/quotes/quote_123 if request.auth.uid == 'user_abc' and request.resource.data.clientId == 'user_abc'.
-     * @allow (get, update, delete) User 'user_abc' can read, update, or delete the quote at /clients/user_abc/quotes/quote_123 if request.auth.uid == 'user_abc'.
-     * @deny (create) User 'user_xyz' cannot create a quote under /clients/user_abc/quotes/quote_123.
-     * @deny (update, delete) User 'user_xyz' cannot update or delete the quote at /clients/user_abc/quotes/quote_123.
-     * @principle Enforces path-based ownership for nested resources.
-     */
-    match /clients/{clientId}/quotes/{quoteId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(clientId) {
-        return isSignedIn() && request.auth.uid == clientId;
-      }
-
-      function isExistingOwner(clientId) {
-        return isOwner(clientId) && resource != null;
-      }
-
-      allow get: if isOwner(clientId);
-      allow list: if isOwner(clientId);
-      allow create: if isOwner(clientId) && request.resource.data.clientId == clientId;
-      allow update: if isExistingOwner(clientId) && request.resource.data.clientId == resource.data.clientId;
-      allow delete: if isExistingOwner(clientId);
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Secures bookings associated with a specific client. Only the client can read/write their own bookings.
-     * @path /clients/{clientId}/bookings/{bookingId}
-     * @allow (create) User 'user_abc' can create a booking under /clients/user_abc/bookings/booking_456 if request.auth.uid == 'user_abc' and request.resource.data.clientId == 'user_abc'.
-     * @allow (get, update, delete) User 'user_abc' can read, update, or delete the booking at /clients/user_abc/bookings/booking_456 if request.auth.uid == 'user_abc'.
-     * @deny (create) User 'user_xyz' cannot create a booking under /clients/user_abc/bookings/booking_456.
-     * @deny (update, delete) User 'user_xyz' cannot update or delete the booking at /clients/user_abc/bookings/booking_456.
-     * @principle Enforces path-based ownership for nested resources.
-     */
-    match /clients/{clientId}/bookings/{bookingId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(clientId) {
-        return isSignedIn() && request.auth.uid == clientId;
-      }
-
-      function isExistingOwner(clientId) {
-        return isOwner(clientId) && resource != null;
-      }
-
-      allow get: if isOwner(clientId);
-      allow list: if isOwner(clientId);
-      allow create: if isOwner(clientId) && request.resource.data.clientId == clientId;
-      allow update: if isExistingOwner(clientId) && request.resource.data.clientId == resource.data.clientId;
-      allow delete: if isExistingOwner(clientId);
+    function isAdmin() {
+      // In a real app, you would get this from a custom claim set on the user's token.
+      // For this example, we'll hardcode the admin UID for simplicity.
+      // Replace 'YOUR_ADMIN_UID' with the actual UID of your admin user.
+      return request.auth.uid == "sC8s4rXwP2Z6lJ8f3tH7kY9oV1r2";
     }
 
-    /**
-     * @description Allows public read access to service information. No write access is granted.
-     * @path /services/{serviceId}
-     * @allow (get, list) Any user can read service information.
-     * @deny (create, update, delete) No user can create, update, or delete service information.
-     * @principle Provides public read access to globally available data.
-     */
-    match /services/{serviceId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+    // User profiles can be read by anyone, but only the owner can write.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+
+      // Bookings can be read/written only by the owner, or read by an admin.
+      match /bookings/{bookingId} {
+        allow list: if isOwner(userId) || isAdmin();
+        allow get, write: if isOwner(userId);
+      }
     }
-
-    /**
-     * @description Secures booking services associated with a specific client and booking. Only the client can read/write their own booking services.
-     * @path /clients/{clientId}/bookings/{bookingId}/bookingServices/{bookingServiceId}
-     * @allow (create) User 'user_abc' can create a booking service under /clients/user_abc/bookings/booking_456/bookingServices/bs_789 if request.auth.uid == 'user_abc'.
-     * @allow (get, update, delete) User 'user_abc' can read, update, or delete the booking service at /clients/user_abc/bookings/booking_456/bookingServices/bs_789 if request.auth.uid == 'user_abc'.
-     * @deny (create) User 'user_xyz' cannot create a booking service under /clients/user_abc/bookings/booking_456/bookingServices/bs_789.
-     * @deny (update, delete) User 'user_xyz' cannot update or delete the booking service at /clients/user_abc/bookings/booking_456/bookingServices/bs_789.
-     * @principle Enforces path-based ownership for deeply nested resources.
-     */
-    match /clients/{clientId}/bookings/{bookingId}/bookingServices/{bookingServiceId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(clientId) {
-        return isSignedIn() && request.auth.uid == clientId;
-      }
-
-      function isExistingOwner(clientId) {
-        return isOwner(clientId) && resource != null;
-      }
-
-      allow get: if isOwner(clientId);
-      allow list: if isOwner(clientId);
-      allow create: if isOwner(clientId);
-      allow update: if isExistingOwner(clientId);
-      allow delete: if isExistingOwner(clientId);
+    
+    // Admin can read all bookings for the dashboard
+    match /users/{userId}/bookings/{bookingId} {
+        allow list: if isAdmin();
     }
   }
 }
