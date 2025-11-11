@@ -2,38 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      // In a real app, you would get this from a custom claim set on the user's token.
-      // For this example, we'll hardcode the admin UID for simplicity.
-      // Replace 'YOUR_ADMIN_UID' with the actual UID of your admin user.
-      return request.auth.uid == "sC8s4rXwP2Z6lJ8f3tH7kY9oV1r2";
-    }
-
-    // User profiles can be read by anyone, but only the owner can write.
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isOwner(userId);
-
-      // Bookings can be read/written only by the owner, or read by an admin.
-      match /bookings/{bookingId} {
-        allow list: if isOwner(userId) || isAdmin();
-        allow get, write: if isOwner(userId);
-      }
-    }
-    
-    // Admin can read all bookings for the dashboard
-    match /users/{userId}/bookings/{bookingId} {
-        allow list: if isAdmin();
+    // By default, deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

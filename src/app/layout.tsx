@@ -1,8 +1,5 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import {Toaster} from '@/components/ui/toaster';
-import {SidebarProvider} from '@/components/ui/sidebar';
-import {FirebaseClientProvider} from '@/firebase';
 import {ReactNode} from 'react';
 
 export const metadata: Metadata = {
@@ -25,12 +22,7 @@ export default function RootLayout({children}: {children: ReactNode}) {
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased">
-        <FirebaseClientProvider>
-          <SidebarProvider>{children}</SidebarProvider>
-        </FirebaseClientProvider>
-        <Toaster />
-      </body>
+      <body className="font-body antialiased">{children}</body>
     </html>
   );
 }
