@@ -1,5 +1,16 @@
 'use server';
-import {admin} from '@/lib/firebase-admin-sdk';
+import * as admin from 'firebase-admin';
+
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+    });
+  } catch (error) {
+    console.error('Firebase admin initialization error', error);
+  }
+}
 
 export async function isUserAdmin(uid: string): Promise<boolean> {
   try {
