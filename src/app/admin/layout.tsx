@@ -1,5 +1,5 @@
 'use client';
-import {ReactNode, useEffect} from 'react';
+import {ReactNode, useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {useUser} from '@/firebase';
 import {isUserAdmin} from '@/app/actions';
@@ -12,23 +12,37 @@ export default function AdminLayout({children}: {children: ReactNode}) {
   const user = useUser();
   const {auth} = useFirebase();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user === null) {
       router.push('/login');
       return;
     }
-    isUserAdmin(user.uid).then((isAdmin) => {
-      if (!isAdmin) {
-        router.push('/');
-      }
-    });
+    if (user) {
+      isUserAdmin(user.uid).then((adminStatus) => {
+        setIsAdmin(adminStatus);
+        if (!adminStatus) {
+          router.push('/');
+        }
+        setLoading(false);
+      });
+    }
   }, [user, router]);
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push('/login');
   };
+
+  if (loading || !isAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-100">

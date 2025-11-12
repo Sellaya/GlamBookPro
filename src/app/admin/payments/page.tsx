@@ -1,4 +1,4 @@
-import {getBookings} from '@/lib/firebase-admin';
+'use client';
 import {Booking} from '@/lib/types';
 import {
   Card,
@@ -17,18 +17,23 @@ import {
 } from '@/components/ui/table';
 import {Calendar} from '@/components/ui/calendar';
 import {BookingCard} from '@/components/booking-card';
-import {Suspense} from 'react';
+import {useCollection} from '@/firebase';
 
-export default async function AdminDashboard() {
-  const bookings = await getBookings();
+export default function AdminDashboard() {
+  const {data: bookings, loading} = useCollection<Booking>('booking');
 
-  const totalRevenue = bookings.reduce(
-    (acc, booking) =>
-      booking.status === 'completed' ? acc + booking.price : acc,
-    0
-  );
+  if (loading) {
+    return <p>Loading dashboard...</p>;
+  }
 
-  const totalBookings = bookings.length;
+  const totalRevenue =
+    bookings?.reduce(
+      (acc, booking) =>
+        booking.status === 'completed' ? acc + booking.price : acc,
+      0
+    ) || 0;
+
+  const totalBookings = bookings?.length || 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -62,9 +67,7 @@ export default async function AdminDashboard() {
             <CardTitle>Recent Bookings</CardTitle>
           </CardHeader>
           <CardContent>
-            <Suspense fallback={<p>Loading recent bookings...</p>}>
-              <RecentBookings bookings={bookings} />
-            </Suspense>
+            {bookings && <RecentBookings bookings={bookings} />}
           </CardContent>
         </Card>
       </div>
@@ -86,9 +89,7 @@ export default async function AdminDashboard() {
             <CardTitle>Upcoming</CardTitle>
           </CardHeader>
           <CardContent>
-            <Suspense fallback={<p>Loading upcoming bookings...</p>}>
-              <UpcomingBookings bookings={bookings} />
-            </Suspense>
+            {bookings && <UpcomingBookings bookings={bookings} />}
           </CardContent>
         </Card>
       </div>

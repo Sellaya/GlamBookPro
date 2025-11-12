@@ -15,14 +15,11 @@ service cloud.firestore {
     // Allow users to read and create their own bookings
     match /booking/{bookingId} {
       allow read, create: if request.auth.uid == resource.data.user;
-
-      // Allow admin user to read all bookings
-      allow read: if get(/databases/$(database)/documents/userProfile/$(request.auth.uid)).data.role == 'admin';
     }
-    
-    // Allow admin user to list all bookings
+
+    // Allow admin user to list all bookings for the dashboard
     match /booking/{bookingId} {
-        allow list: if get(/databases/$(database)/documents/userProfile/$(request.auth.uid)).data.role == 'admin';
+      allow list: if get(/databases/$(database)/documents/userProfile/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
